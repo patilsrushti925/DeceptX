@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scam Shield - Message Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff41;
+            --primary-dim: #00cc33;
+            --danger: #ff0055;
+            --warning: #ffaa00;
+            --bg-dark: #0a0e14;
+            --bg-darker: #050810;
+            --bg-card: #12161f;
+            --text: #e6e6e6;
+            --text-dim: #8892a6;
+            --border: #1a2332;
+            --accent: #00d4ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: var(--bg-darker);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(0deg, transparent 24%, rgba(0, 255, 65, 0.05) 25%, rgba(0, 255, 65, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, 0.05) 75%, rgba(0, 255, 65, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 255, 65, 0.05) 25%, rgba(0, 255, 65, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, 0.05) 75%, rgba(0, 255, 65, 0.05) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            z-index: 0;
+            pointer-events: none;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Scanline effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(0, 255, 65, 0.02) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 65, 0.5),
+                0 0 20px rgba(0, 255, 65, 0.3),
+                0 0 40px rgba(0, 255, 65, 0.2);
+            animation: glitchText 5s infinite;
+        }
+
+        @keyframes glitchText {
+            0%, 90%, 100% { 
+                text-shadow: 
+                    0 0 10px rgba(0, 255, 65, 0.5),
+                    0 0 20px rgba(0, 255, 65, 0.3),
+                    0 0 40px rgba(0, 255, 65, 0.2);
+            }
+            95% {
+                text-shadow: 
+                    -2px 0 10px rgba(0, 255, 65, 0.5),
+                    2px 0 20px rgba(255, 0, 85, 0.3),
+                    0 0 40px rgba(0, 212, 255, 0.2);
+            }
+        }
+
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--accent);
+            letter-spacing: 0.2em;
+            opacity: 0.8;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(0, 255, 65, 0.1);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: borderScan 3s linear infinite;
+        }
+
+        @keyframes borderScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        label {
+            display: block;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            background: var(--bg-darker);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.95rem;
+            padding: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 
+                0 0 0 3px rgba(0, 255, 65, 0.1),
+                inset 0 0 20px rgba(0, 255, 65, 0.05);
+        }
+
+        textarea::placeholder {
+            color: var(--text-dim);
+            opacity: 0.5;
+        }
+
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--primary-dim), var(--primary));
+            color: var(--bg-darker);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 15px rgba(0, 255, 65, 0.3),
+                0 0 30px rgba(0, 255, 65, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 25px rgba(0, 255, 65, 0.4),
+                0 0 40px rgba(0, 255, 65, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .risk-score {
+            text-align: center;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .risk-score.low {
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.1), rgba(0, 255, 65, 0.05));
+            border: 2px solid rgba(0, 255, 65, 0.3);
+        }
+
+        .risk-score.medium {
+            background: linear-gradient(135deg, rgba(255, 170, 0, 0.1), rgba(255, 170, 0, 0.05));
+            border: 2px solid rgba(255, 170, 0, 0.3);
+        }
+
+        .risk-score.high {
+            background: linear-gradient(135deg, rgba(255, 0, 85, 0.1), rgba(255, 0, 85, 0.05));
+            border: 2px solid rgba(255, 0, 85, 0.3);
+        }
+
+        .score-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .risk-score.low .score-value {
+            color: var(--primary);
+            text-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+        }
+
+        .risk-score.medium .score-value {
+            color: var(--warning);
+            text-shadow: 0 0 30px rgba(255, 170, 0, 0.5);
+        }
+
+        .risk-score.high .score-value {
+            color: var(--danger);
+            text-shadow: 0 0 30px rgba(255, 0, 85, 0.5);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .risk-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.9;
+        }
+
+        .risk-message {
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            opacity: 0.8;
+        }
+
+        .findings {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .finding-group h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .finding-group h3::before {
+            content: '▸';
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .finding-list {
+            background: var(--bg-darker);
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+            padding: 1rem 1.5rem;
+        }
+
+        .finding-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .finding-item:last-child {
+            border-bottom: none;
+        }
+
+        .finding-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .finding-icon.danger { color: var(--danger); }
+        .finding-icon.warning { color: var(--warning); }
+        .finding-icon.info { color: var(--accent); }
+
+        .finding-text {
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .finding-text strong {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .score-value {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Scam Shield</h1>
+            <p class="subtitle">Message Threat Analyzer</p>
+        </header>
+
+        <div class="card">
+            <label for="messageInput">Paste Message for Analysis</label>
+            <textarea 
+                id="messageInput" 
+                placeholder="Paste any suspicious message here (email, text, DM, etc.)...&#10;&#10;Example:&#10;URGENT: Your account will be suspended in 24 hours! Click here immediately to verify your information: http://sketchy-link.com"
+            ></textarea>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <button class="btn" onclick="analyzeMessage()">
+                <span>Analyze Message</span>
+            </button>
+        </div>
+
+        <div id="resultsSection" class="results">
+            <div class="card">
+                <div id="riskScore" class="risk-score">
+                    <div class="score-value" id="scoreValue">0</div>
+                    <div class="risk-label" id="riskLabel">Safe</div>
+                    <div class="risk-message" id="riskMessage">No threats detected</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="findings" id="findings"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>⚠️ This is an educational tool. Always verify suspicious messages through official channels.</p>
+        </div>
+    </div>
+
+    <script>
+        // Scam detection patterns
+        const SCAM_PATTERNS = {
+            urgency: {
+                keywords: [
+                    'urgent', 'immediately', 'act now', 'limited time', 'expires',
+                    'deadline', 'last chance', 'hurry', 'quick', 'asap',
+                    'within 24 hours', 'right now', 'don\'t wait', 'time sensitive',
+                    'final notice', 'immediate action required'
+                ],
+                weight: 15
+            },
+            financial: {
+                keywords: [
+                    'verify account', 'confirm payment', 'suspended account', 'unusual activity',
+                    'refund', 'claim prize', 'won', 'winner', 'free money',
+                    'tax refund', 'credit card', 'bank account', 'social security',
+                    'update payment', 'billing problem', 'invoice attached'
+                ],
+                weight: 20
+            },
+            threats: {
+                keywords: [
+                    'suspended', 'blocked', 'locked', 'terminated', 'legal action',
+                    'lawsuit', 'arrest', 'police', 'warrant', 'fine',
+                    'penalty', 'consequences', 'prosecuted', 'deactivated'
+                ],
+                weight: 25
+            },
+            requests: {
+                keywords: [
+                    'click here', 'verify now', 'update now', 'confirm here',
+                    'download', 'open attachment', 'sign in', 'log in',
+                    'provide information', 'send', 'reply with', 'call this number',
+                    'enter your password', 'give us'
+                ],
+                weight: 15
+            },
+            tooGoodToBeTrue: {
+                keywords: [
+                    'congratulations', 'you\'ve won', 'selected', 'chosen',
+                    'free', 'gift card', 'prize', 'guaranteed', '100%',
+                    'risk free', 'no cost', 'earn money fast', 'work from home',
+                    'be your own boss', 'make money'
+                ],
+                weight: 20
+            }
+        };
+
+        // Suspicious link patterns
+        const SUSPICIOUS_LINK_PATTERNS = [
+            /bit\.ly|tinyurl|goo\.gl|ow\.ly/i, // URL shorteners
+            /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, // IP addresses
+            /@/g, // @ symbols in URLs (phishing technique)
+            /[а-яА-Я]/g, // Cyrillic characters (homograph attacks)
+        ];
+
+        // Common legitimate domains (lowercase for comparison)
+        const LEGITIMATE_DOMAINS = [
+            'google.com', 'gmail.com', 'yahoo.com', 'microsoft.com', 'apple.com',
+            'amazon.com', 'paypal.com', 'facebook.com', 'instagram.com', 'twitter.com'
+        ];
+
+        function analyzeMessage() {
+            const message = document.getElementById('messageInput').value.trim();
+            
+            if (!message) {
+                alert('Please paste a message to analyze');
+                return;
+            }
+
+            const analysis = performAnalysis(message);
+            displayResults(analysis);
+        }
+
+        function performAnalysis(message) {
+            const messageLower = message.toLowerCase();
+            const analysis = {
+                score: 0,
+                findings: {
+                    keywords: [],
+                    links: [],
+                    urgency: [],
+                    other: []
+                }
+            };
+
+            // Check for scam keywords
+            for (const [category, data] of Object.entries(SCAM_PATTERNS)) {
+                const found = data.keywords.filter(keyword => 
+                    messageLower.includes(keyword.toLowerCase())
+                );
+                
+                if (found.length > 0) {
+                    analysis.score += data.weight * Math.min(found.length, 3);
+                    
+                    found.forEach(keyword => {
+                        const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                        analysis.findings.keywords.push({
+                            text: `"${keyword}" (${categoryName} indicator)`,
+                            severity: data.weight > 20 ? 'danger' : 'warning'
+                        });
+                    });
+                }
+            }
+
+            // Check for links
+            const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+            const urls = message.match(urlRegex) || [];
+            
+            urls.forEach(url => {
+                let suspicious = false;
+                let reason = '';
+
+                // Check for URL shorteners
+                if (/bit\.ly|tinyurl|goo\.gl|ow\.ly|t\.co/i.test(url)) {
+                    suspicious = true;
+                    reason = 'URL shortener detected (hides real destination)';
+                    analysis.score += 15;
+                }
+
+                // Check for IP addresses
+                else if (/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(url)) {
+                    suspicious = true;
+                    reason = 'Direct IP address (unusual for legitimate sites)';
+                    analysis.score += 20;
+                }
+
+                // Check for @ symbol (phishing technique)
+                else if (url.includes('@')) {
+                    suspicious = true;
+                    reason = 'Contains @ symbol (potential phishing)';
+                    analysis.score += 25;
+                }
+
+                // Check for suspicious TLDs
+                else if (/\.(tk|ml|ga|cf|gq|xyz|top|click|link)$/i.test(url)) {
+                    suspicious = true;
+                    reason = 'Suspicious domain extension';
+                    analysis.score += 15;
+                }
+
+                // Check for typosquatting of legitimate domains
+                else {
+                    for (const legit of LEGITIMATE_DOMAINS) {
+                        const domain = url.toLowerCase();
+                        if (domain.includes(legit.replace('.', '')) && !domain.includes(legit)) {
+                            suspicious = true;
+                            reason = `Possible typosquatting of ${legit}`;
+                            analysis.score += 30;
+                            break;
+                        }
+                    }
+                }
+
+                analysis.findings.links.push({
+                    url: url,
+                    suspicious: suspicious,
+                    reason: reason,
+                    severity: suspicious ? 'danger' : 'info'
+                });
+
+                if (suspicious) {
+                    analysis.score += 10; // Additional points for any suspicious link
+                }
+            });
+
+            // Check message length and structure
+            if (message.length < 50) {
+                analysis.findings.other.push({
+                    text: 'Very short message (common in phishing)',
+                    severity: 'warning'
+                });
+                analysis.score += 5;
+            }
+
+            // Check for excessive punctuation
+            const exclamationCount = (message.match(/!/g) || []).length;
+            if (exclamationCount >= 3) {
+                analysis.findings.other.push({
+                    text: `Excessive punctuation (${exclamationCount} exclamation marks)`,
+                    severity: 'warning'
+                });
+                analysis.score += 10;
+            }
+
+            // Check for ALL CAPS
+            const capsWords = message.match(/\b[A-Z]{4,}\b/g) || [];
+            if (capsWords.length >= 2) {
+                analysis.findings.other.push({
+                    text: `Multiple words in ALL CAPS (${capsWords.length} instances)`,
+                    severity: 'warning'
+                });
+                analysis.score += 10;
+            }
+
+            // Check for spelling errors (basic check)
+            const commonMisspellings = ['acount', 'recieve', 'verfiy', 'confirme', 'offical', 'secruity'];
+            commonMisspellings.forEach(misspelling => {
+                if (messageLower.includes(misspelling)) {
+                    analysis.findings.other.push({
+                        text: `Spelling error detected: "${misspelling}"`,
+                        severity: 'warning'
+                    });
+                    analysis.score += 8;
+                }
+            });
+
+            // Cap the score at 100
+            analysis.score = Math.min(analysis.score, 100);
+
+            return analysis;
+        }
+
+        function displayResults(analysis) {
+            const resultsSection = document.getElementById('resultsSection');
+            const scoreValue = document.getElementById('scoreValue');
+            const riskLabel = document.getElementById('riskLabel');
+            const riskMessage = document.getElementById('riskMessage');
+            const riskScore = document.getElementById('riskScore');
+            const findings = document.getElementById('findings');
+
+            // Determine risk level
+            let riskLevel, riskClass, message;
+            if (analysis.score < 30) {
+                riskLevel = 'Low Risk';
+                riskClass = 'low';
+                message = 'This message appears relatively safe, but stay vigilant.';
+            } else if (analysis.score < 60) {
+                riskLevel = 'Medium Risk';
+                riskClass = 'medium';
+                message = 'This message shows some concerning signs. Proceed with caution.';
+            } else {
+                riskLevel = 'High Risk';
+                riskClass = 'high';
+                message = 'This message shows multiple scam indicators. Do not interact with it.';
+            }
+
+            // Update score display
+            scoreValue.textContent = analysis.score;
+            riskLabel.textContent = riskLevel;
+            riskMessage.textContent = message;
+            riskScore.className = `risk-score ${riskClass}`;
+
+            // Build findings HTML
+            let findingsHTML = '';
+
+            // Keywords section
+            if (analysis.findings.keywords.length > 0) {
+                findingsHTML += `
+                    <div class="finding-group">
+                        <h3>Suspicious Keywords</h3>
+                        <div class="finding-list">
+                            ${analysis.findings.keywords.map(item => `
+                                <div class="finding-item">
+                                    <span class="finding-icon ${item.severity}">⚠</span>
+                                    <span class="finding-text">${item.text}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Links section
+            if (analysis.findings.links.length > 0) {
+                findingsHTML += `
+                    <div class="finding-group">
+                        <h3>Links Detected</h3>
+                        <div class="finding-list">
+                            ${analysis.findings.links.map(item => `
+                                <div class="finding-item">
+                                    <span class="finding-icon ${item.severity}">${item.suspicious ? '🔴' : '🔗'}</span>
+                                    <span class="finding-text">
+                                        <strong>${item.url}</strong>
+                                        ${item.reason ? `<br>${item.reason}` : '<br>Link appears normal'}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Other findings section
+            if (analysis.findings.other.length > 0) {
+                findingsHTML += `
+                    <div class="finding-group">
+                        <h3>Additional Indicators</h3>
+                        <div class="finding-list">
+                            ${analysis.findings.other.map(item => `
+                                <div class="finding-item">
+                                    <span class="finding-icon ${item.severity}">ℹ</span>
+                                    <span class="finding-text">${item.text}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // No findings
+            if (findingsHTML === '') {
+                findingsHTML = '<div class="empty-state">No specific threats detected in this message.</div>';
+            }
+
+            findings.innerHTML = findingsHTML;
+            resultsSection.classList.add('active');
+
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
